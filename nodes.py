@@ -3,7 +3,7 @@ import json
 import shutil
 import folder_paths
 from pathlib import Path
-from comfy.utils import ProgressBar  # <--- NUEVO: Importamos la barra de progreso
+from comfy.utils import ProgressBar
 
 class WorkflowBackupNode:
     def __init__(self):
@@ -27,9 +27,18 @@ class WorkflowBackupNode:
     CATEGORY = "utils/backup"
 
     def process_backup(self, workflows_path, backup_destination, mode, language):
-        # 1. Path Cleaning
-        w_path = Path(workflows_path.strip('"').strip("'"))
-        dest_path = Path(backup_destination.strip('"').strip("'"))
+        # 1. Path Cleaning (Sanitization)
+        # Fixes requested by ComfyUI-Manager (Dr.Lt.Data)
+        def sanitize_path(path_str):
+            if not path_str:
+                return None
+            # Strip quotes and whitespace
+            clean = path_str.strip().strip('"').strip("'")
+            # Normalize path (fixes slashes and resolves '..') and make absolute
+            return Path(os.path.abspath(os.path.normpath(clean)))
+
+        w_path = sanitize_path(workflows_path)
+        dest_path = sanitize_path(backup_destination)
         
         # 2. Setup Messages
         msgs = {
@@ -69,7 +78,7 @@ class WorkflowBackupNode:
         comfy_root = Path(folder_paths.base_path)
         models_root = comfy_root / "models"
         
-        if not w_path.exists():
+        if not w_path or not w_path.exists():
             return (f"{T['err_path']}{workflows_path}",)
 
         # 4. Logic
@@ -104,7 +113,7 @@ class WorkflowBackupNode:
                 
                 nodes = data.get('nodes', [])
                 if not nodes and isinstance(data, dict): 
-                     nodes = list(data.values())
+                      nodes = list(data.values())
 
                 for node in nodes:
                     if not isinstance(node, dict): continue
@@ -149,11 +158,11 @@ class WorkflowBackupNode:
                     shutil.copy2(wf, wf_dest)
                 except: pass
             
-            # 2. Backup Models (CON BARRA DE PROGRESO)
+            # 2. Backup Models (WITH PROGRESS BAR)
             copied_count = 0
             
-            # Inicializamos la barra de progreso
-            pbar = ProgressBar(total_files) # <--- NUEVO
+            # Initialize progress bar
+            pbar = ProgressBar(total_files)
             
             for src, cat in files_to_copy.items():
                 try:
@@ -168,8 +177,8 @@ class WorkflowBackupNode:
                         shutil.copy2(src_path, final_dest_file)
                         copied_count += 1
                     
-                    # Actualizamos la barra
-                    pbar.update(1) # <--- NUEVO: Avanza 1 paso en la barra azul
+                    # Update progress bar
+                    pbar.update(1)
                     
                 except Exception as e:
                     print(T['err_copy'].format(src=src, error=str(e)))
