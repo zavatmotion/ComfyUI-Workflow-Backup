@@ -1,0 +1,7 @@
+{
+    "allowed_paths": [
+        "D:/ComfyUI_Backup",
+        "E:/MyExternalDrive",
+        "/mnt/backups"
+    ]
+}
