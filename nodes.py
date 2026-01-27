@@ -14,7 +14,8 @@ class WorkflowBackupNode:
         return {
             "required": {
                 "workflows_path": ("STRING", {"default": "Paste your path here", "multiline": False}),
-                "backup_destination": ("STRING", {"default": "D:/ComfyUI_Backup", "multiline": False}),
+                # CAMBIO AQUÍ: Default seguro dentro de ComfyUI para que funcione sin JSON
+                "backup_destination": ("STRING", {"default": "output/workflow_backups", "multiline": False}),
                 "mode": (["ANALYSIS_ONLY", "EXECUTE_BACKUP"],),
                 "language": (["English", "Spanish"],),
             },
@@ -27,76 +28,70 @@ class WorkflowBackupNode:
     CATEGORY = "utils/backup"
 
     def process_backup(self, workflows_path, backup_destination, mode, language):
-        """
-        Path Sanitization using Dr.Lt.Data's recommended approach:
-        1. normpath to normalize the path (resolve .., //, etc.)
-        2. commonpath to restrict access within allowed boundaries
-        """
         
-        def sanitize_path(path_str, allowed_root):
+        # --- SECURITY: LOAD WHITELIST ---
+        def get_allowed_roots():
             """
-            Sanitizes a path ensuring it stays within the allowed_root boundary.
-            Implementation follows Dr.Lt.Data's security recommendation.
+            Reads 'extra_paths.json' from the node directory to find allowed external paths.
+            Always includes the ComfyUI base directory as a safe default.
             """
-            if not path_str:
-                return None
-
-            # Strip quotes and whitespace
-            clean = path_str.strip().strip('"').strip("'")
+            allowed = [os.path.abspath(folder_paths.base_path)]
             
-            # Normalize and make absolute (resolves .. and //)
-            logical = os.path.abspath(os.path.normpath(clean))
-            allowed = os.path.abspath(allowed_root)
-
-            try:
-                # Ensure the path is actually inside the allowed_root
-                if os.path.commonpath([logical, allowed]) == allowed:
-                    return Path(logical)
-            except ValueError:
-                # Occurs if paths are on different drives in Windows
-                pass
-
-            return None
-
-        def get_allowed_root(raw_path):
-            """
-            Determines the allowed root for a given path.
-            - For absolute paths: allows the drive root (Windows) or filesystem root (Unix)
-            - For relative paths: restricts to ComfyUI base directory
+            # Look for config file in the same folder as this script
+            current_dir = os.path.dirname(os.path.realpath(__file__))
+            config_file = os.path.join(current_dir, "extra_paths.json")
             
-            This is necessary because backup operations require writing to external drives.
+            if os.path.exists(config_file):
+                try:
+                    with open(config_file, 'r') as f:
+                        data = json.load(f)
+                        for path in data.get("allowed_paths", []):
+                            if os.path.exists(path):
+                                allowed.append(os.path.abspath(path))
+                except Exception as e:
+                    print(f"[WorkflowBackup] Warning: Could not read extra_paths.json: {e}")
+            
+            return allowed
+
+        def is_safe_path(path_str, allowed_roots):
             """
-            if not raw_path:
-                return folder_paths.base_path
-                
-            clean = raw_path.strip().strip('"').strip("'")
+            Checks if the path is inside one of the allowed roots using commonpath.
+            """
+            if not path_str: return False
             
             try:
-                if os.path.isabs(clean):
-                    # For absolute paths, allow the drive/root as boundary
-                    # Windows: "D:\path" -> "D:\"
-                    # Unix: "/path" -> "/"
-                    drive, _ = os.path.splitdrive(clean)
-                    if drive:
-                        return drive + os.sep
-                    return os.sep
+                # Handle relative paths by joining with base_path just for the check
+                if not os.path.isabs(path_str):
+                    clean_path = os.path.abspath(os.path.join(folder_paths.base_path, path_str.strip().strip('"').strip("'")))
                 else:
-                    # For relative paths, restrict to ComfyUI folder
-                    return folder_paths.base_path
+                    clean_path = os.path.abspath(os.path.normpath(path_str.strip().strip('"').strip("'")))
+                
+                for root in allowed_roots:
+                    root_clean = os.path.abspath(root)
+                    try:
+                        # Check if clean_path starts with root_clean
+                        if os.path.commonpath([clean_path, root_clean]) == root_clean:
+                            return True
+                    except ValueError:
+                        continue # Different drives
             except Exception:
-                return folder_paths.base_path
+                return False
+                
+            return False
 
-        # Apply sanitization with appropriate roots
-        workflows_root = get_allowed_root(workflows_path)
-        w_path = sanitize_path(workflows_path, workflows_root)
-
-        destination_root = get_allowed_root(backup_destination)
-        dest_path = sanitize_path(backup_destination, destination_root)
+        # --- VALIDATION ---
         
-        # Setup Messages (bilingual support)
+        # 1. Load Permissions
+        allowed_roots = get_allowed_roots()
+        
+        # 2. Check Paths
+        w_ok = is_safe_path(workflows_path, allowed_roots)
+        d_ok = is_safe_path(backup_destination, allowed_roots)
+        
+        # Messages
         msgs = {
             "English": {
-                "err_security": "⛔ SECURITY ERROR: Path rejected by sanitizer (possible path traversal attempt): ",
+                "err_security": "⛔ SECURITY ERROR: Path not allowed. To use external drives, create 'extra_paths.json' in the node folder. Rejected: ",
                 "err_path": "❌ ERROR: The workflows folder does not exist: ",
                 "err_no_json": "⚠️ No .json files found in ",
                 "analyzing": "🔍 Analyzing {count} workflows in: {path}",
@@ -111,7 +106,7 @@ class WorkflowBackupNode:
                 "analysis_mode": "ℹ️ ANALYSIS MODE: No files were copied. Switch mode to EXECUTE_BACKUP to perform the copy."
             },
             "Spanish": {
-                "err_security": "⛔ ERROR DE SEGURIDAD: Ruta rechazada por el sanitizador (posible intento de path traversal): ",
+                "err_security": "⛔ ERROR DE SEGURIDAD: Ruta no permitida. Para usar discos externos, crea 'extra_paths.json' en la carpeta del nodo. Rechazada: ",
                 "err_path": "❌ ERROR: La carpeta de workflows no existe: ",
                 "err_no_json": "⚠️ No se encontraron archivos .json en ",
                 "analyzing": "🔍 Analizando {count} workflows en: {path}",
@@ -127,22 +122,34 @@ class WorkflowBackupNode:
             }
         }
         
-        T = msgs[language]
+        T = msgs[language] 
 
-        # Validate sanitization results
-        if w_path is None:
-            return (f"{T['err_security']}{workflows_path}",)
-        if dest_path is None:
-            return (f"{T['err_security']}{backup_destination}",)
+        if not w_ok:
+            return (f"{T['err_security']} {workflows_path}",)
+        if not d_ok:
+            return (f"{T['err_security']} {backup_destination}",)
 
-        # ComfyUI Root Detection
+        # 3. Standard Logic
+        # Handle relative vs absolute for execution
+        raw_w = workflows_path.strip().strip('"').strip("'")
+        raw_d = backup_destination.strip().strip('"').strip("'")
+        
+        if os.path.isabs(raw_w):
+            w_path = Path(raw_w)
+        else:
+            w_path = Path(folder_paths.base_path) / raw_w
+            
+        if os.path.isabs(raw_d):
+            dest_path = Path(raw_d)
+        else:
+            dest_path = Path(folder_paths.base_path) / raw_d
+
         comfy_root = Path(folder_paths.base_path)
         models_root = comfy_root / "models"
         
         if not w_path.exists():
             return (f"{T['err_path']}{workflows_path}",)
 
-        # Find all workflow files
         workflows_found = list(w_path.rglob("*.json"))
         if not workflows_found:
             return (f"{T['err_no_json']}{workflows_path}",)
@@ -150,8 +157,8 @@ class WorkflowBackupNode:
         report = []
         report.append(T['analyzing'].format(count=len(workflows_found), path=w_path))
         
-        files_to_copy = {}  # {source_path: category}
-
+        files_to_copy = {} # {source_path: category}
+        
         # --- ANALYSIS PHASE ---
         for wf_file in workflows_found:
             try:
@@ -159,32 +166,27 @@ class WorkflowBackupNode:
                     data = json.load(f)
                 
                 nodes = data.get('nodes', [])
-                if not nodes and isinstance(data, dict):
-                    nodes = list(data.values())
+                if not nodes and isinstance(data, dict): 
+                      nodes = list(data.values())
 
                 for node in nodes:
-                    if not isinstance(node, dict):
-                        continue
+                    if not isinstance(node, dict): continue
                     
                     valores = []
                     widgets = node.get('widgets_values', [])
                     inputs = node.get('inputs', {})
                     
-                    if isinstance(widgets, list):
-                        valores.extend(widgets)
-                    if isinstance(inputs, dict):
-                        valores.extend(inputs.values())
+                    if isinstance(widgets, list): valores.extend(widgets)
+                    if isinstance(inputs, dict): valores.extend(inputs.values())
 
                     for val in valores:
-                        if not isinstance(val, str):
-                            continue
+                        if not isinstance(val, str): continue
                         
                         if any(ext in val.lower() for ext in ['.safetensors', '.pt', '.pth', '.ckpt', '.bin']):
                             ruta_real = self._find_model_file(models_root, val)
                             if ruta_real:
                                 cat_detectada = Path(ruta_real).parent.name
                                 files_to_copy[ruta_real] = cat_detectada
-                                
             except Exception as e:
                 report.append(T['err_read'].format(file=wf_file.name, error=str(e)))
 
@@ -208,10 +210,9 @@ class WorkflowBackupNode:
             for wf in workflows_found:
                 try:
                     shutil.copy2(wf, wf_dest)
-                except Exception:
-                    pass
+                except: pass
             
-            # 2. Backup Models (with progress bar)
+            # 2. Backup Models
             copied_count = 0
             pbar = ProgressBar(total_files)
             
@@ -242,10 +243,8 @@ class WorkflowBackupNode:
         return ("\n".join(report),)
 
     def _find_model_file(self, root_path, filename):
-        """Search for a model file within the models directory."""
         possible_path = root_path / filename
-        if possible_path.exists():
-            return str(possible_path)
+        if possible_path.exists(): return str(possible_path)
         
         clean_name = Path(filename).name
         for file in root_path.rglob(clean_name):
