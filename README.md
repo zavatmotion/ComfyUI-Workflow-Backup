@@ -17,7 +17,8 @@ To comply with strict security standards, this node **blocks write access to ext
 To allow backups to external drives (e.g., `D:/`, `E:/`, `/mnt/`), you **must** create a configuration file manually:
 
 1.  Go to the node directory: `ComfyUI/custom_nodes/ComfyUI-Workflow-Backup/`
-2.  Create a new file named `extra_paths.json`.
+2.  **Workflows Path:** Paste the **specific folder** where your `.json` workflows are located (e.g., `ComfyUI/user/default/workflows`).
+    * *⚠️ Tip: Do not use the root `ComfyUI` folder, or the node will try to scan system files and show warnings.*
 3.  Add the allowed root folders inside using the JSON format below.
 
 **Example `extra_paths.json`:**
