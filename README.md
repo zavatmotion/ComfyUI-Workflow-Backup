@@ -32,34 +32,28 @@ To allow backups to external drives (e.g., `D:/`, `E:/`, `/mnt/`), you **must** 
 }
 ⚠️ Note: If extra_paths.json is missing or the destination path is not whitelisted, the node will force the backup to be saved inside the standard ComfyUI/output/workflow_backups folder.
 
-📦 Installation
-Via ComfyUI Manager:
+## 📦 Installation
 
-Search for "Workflow Backup" in the Manager and click Install.
+**Via ComfyUI Manager:**
+* Search for `Workflow Backup` in the Manager and click **Install**.
 
-Manual Installation:
+**Manual Installation:**
+1. Go to your `custom_nodes` folder.
+2. Run: `git clone https://github.com/zavatmotion/ComfyUI-Workflow-Backup.git`
+3. Restart ComfyUI.
 
-Go to your custom_nodes folder.
+## 🚀 How to Use
 
-Run: git clone https://github.com/zavatmotion/ComfyUI-Workflow-Backup.git
+**Quick Start:** You can load the included `Models-Backup.json` workflow file to get started immediately.
 
-Restart ComfyUI.
+1.  Add the node **"Workflow Backup"** (Category: `utils/backup`).
+2.  **Workflows Path:** Paste the **specific folder** where your `.json` workflows are located (e.g., `ComfyUI/user/default/workflows`).
+    * *⚠️ Tip: Do not use the root `ComfyUI` folder to avoid scanning system files.*
+3.  **Backup Destination:** Choose where to save the backup.
+    * *Remember: If you want to use an external drive, you must add it to `extra_paths.json` first.*
+4.  **Mode:**
+    * `ANALYSIS_ONLY`: Checks files and calculates size (Safe mode).
+    * `EXECUTE_BACKUP`: Performs the actual copy.
 
-🚀 How to Use
-Quick Start: You can load the included Models-Backup.json workflow file to get started immediately.
-
-Add the node "Workflow Backup" (Category: utils/backup).
-
-Workflows Path: Paste the path where your .json workflows are located.
-
-Backup Destination: Choose where to save the backup.
-
-Remember: If you want to use an external drive, you must add it to extra_paths.json first.
-
-Mode:
-
-ANALYSIS_ONLY: Checks files and calculates size (Safe mode).
-
-EXECUTE_BACKUP: Performs the actual copy.
-
-Created by zavatmotion
+---
+*Created by [zavatmotion](https://github.com/zavatmotion)*
