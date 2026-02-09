@@ -30,7 +30,8 @@ To allow backups to external drives (e.g., `D:/`, `E:/`, `/mnt/`), you **must** 
         "/mnt/backups"
     ]
 }
-⚠️ Note: If extra_paths.json is missing or the destination path is not whitelisted, the node will force the backup to be saved inside the standard ComfyUI/output/workflow_backups folder.
+⚠️ Note: If extra_paths.json is missing or the destination path is not whitelisted, 
+the node will force the backup to be saved inside the standard ComfyUI/output/workflow_backups folder.
 
 ## 📦 Installation
 
