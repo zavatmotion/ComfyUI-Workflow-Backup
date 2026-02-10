@@ -56,6 +56,9 @@ https://github.com/user-attachments/assets/48e1cd52-922b-4346-9962-125a2633ea99
    * *Remember: If you want to use an external drive, you must add it to `extra_paths.json` first.*
 4. **Mode:**
    * `ANALYSIS_ONLY`: Checks files and calculates size (Safe mode).
+##  Support & Feedback
+
+If you find a bug or have a suggestion, please [Open an Issue](https://github.com/zavatmotion/ComfyUI-Workflow-Backup/issues) here on GitHub.   
    * `EXECUTE_BACKUP`: Performs the actual copy.
 
 ---
