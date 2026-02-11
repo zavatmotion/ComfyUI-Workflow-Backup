@@ -43,13 +43,18 @@ the node will force the backup to be saved inside the standard ComfyUI/output/wo
 3. Restart ComfyUI.
 
 ## 🚀 How to Use
-Video Tutorial.
 
+### 📺 Video Tutorials
 
+**1. Basic Usage (No configuration needed)**
+*Use this if you only want to save backups inside your ComfyUI folder.*
 
-https://github.com/user-attachments/assets/c05a932e-781a-4d9c-b2a2-ac6dd2181cfa
+https://github.com/user-attachments/assets/502004be-94ce-4043-ab9d-86ed68728625
 
+**2. Advanced: How to use External Drives**
+*Use this if you want to save backups to your Desktop, USB, or other drives.*
 
+https://github.com/user-attachments/assets/9d6b9ce8-e808-40e4-af72-b0944a21a312
 
 **Quick Start:** You can load the included `Models-Backup.json` workflow file to get started immediately.
 
