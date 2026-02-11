@@ -45,7 +45,11 @@ the node will force the backup to be saved inside the standard ComfyUI/output/wo
 ## 🚀 How to Use
 Video Tutorial.
 
-https://github.com/user-attachments/assets/48e1cd52-922b-4346-9962-125a2633ea99
+
+
+https://github.com/user-attachments/assets/c05a932e-781a-4d9c-b2a2-ac6dd2181cfa
+
+
 
 **Quick Start:** You can load the included `Models-Backup.json` workflow file to get started immediately.
 
